@@ -1,0 +1,218 @@
+						rm(list=ls())
+			#args <- commandArgs(trailingOnly=TRUE)
+			#print (args)
+			setwd("C:/Users/lapebie/Desktop/php_R_analyse_PUL")
+			library.path <- .libPaths()
+			library("vegan", lib.loc = library.path)
+			library("JLutils", lib.loc = library.path)
+			library(ggExtra, lib.loc = library.path)
+			library(packcircles, lib.loc = library.path)
+			library(ggplot2, lib.loc = library.path)
+			
+			mod2018=read.table("modularity_ss_Sum.csv", header = TRUE, stringsAsFactors = FALSE, sep=";")
+
+			if (length(which(mod2018$V6=="CAZyme cluster"))>0){
+			mod2018=mod2018[-which(mod2018$V6=="CAZyme cluster"),]
+			}
+			
+			
+			genome=unique(mod2018$V4)
+			bilan=data.frame(nb_genomes=seq(from=50, to=950, by=50), nb_total_0=rep(NA,19), nb_total_1=rep(NA,19), nb_total_2=rep(NA,19),nb_total_3=rep(NA,19),nb_total_4=rep(NA,19), nb_singl_0=rep(NA,19), nb_singl_2=rep(NA,19), nb_singl_4=rep(NA,19), nb_PULs=rep(NA,19))
+			nb_genomes=c(seq(from=50, to=950, by=50),964)
+
+			
+			for (k in  1:length(nb_genomes)){
+			A0_serie=vector()
+			A1_serie=vector()
+			A2_serie=vector()
+			A3_serie=vector()
+			A4_serie=vector()
+			for (u in 1:10){
+			genomes_selectionnes=sample(genome, nb_genomes[k], replace = FALSE, prob = NULL)
+			index=unlist(lapply(genomes_selectionnes, function(x) which(mod2018$V4==x)))
+			mod2018_bis=mod2018[index,]	
+			rownames(mod2018_bis)=mod2018_bis[,1]
+			T2018_bis=mod2018_bis[,12:length(colnames(mod2018_bis))]
+			cazy=unique(c(which(unlist(gregexpr("GH", colnames(T2018_bis)))>0), which(unlist(gregexpr("CE", colnames(T2018_bis)))>0), which(unlist(gregexpr("PL", colnames(T2018_bis)))>0)))
+			CE=unique(which(unlist(gregexpr("CE", colnames(T2018_bis)))>0))
+			GT=unique(which(unlist(gregexpr("GT", colnames(T2018_bis)))>0))
+			Sulf=unique(which(unlist(gregexpr("Sulf", colnames(T2018_bis)))>0))
+			Pept=unique(which(unlist(gregexpr("Pept", colnames(T2018_bis)))>0))
+			Sum_GH_PL=rowSums(T2018_bis[,cazy])
+			Sum_CE=rowSums(T2018_bis[,CE])
+			Sum_GT=rowSums(T2018_bis[,GT])
+			Sum_Pept=T2018_bis[,Pept]
+			Sum_Sulf=T2018_bis[,Sulf]	
+			T2018_bis=T2018_bis[-which(Sum_GH_PL==0),]
+			dist_PUL2018=vegdist(T2018_bis[-GT], method="jaccard")## là on regarde les PUL
+				
+			ht <- hclust(dist_PUL2018, method="average")
+
+
+			ht$height <- round(ht$height, 6)
+			
+			A0=cutree(ht, h=as.numeric(0)*max(ht$height))
+			A1=cutree(ht, h=as.numeric(0.1)*max(ht$height))
+			A2=cutree(ht, h=as.numeric(0.2)*max(ht$height))
+			A3=cutree(ht, h=as.numeric(0.3)*max(ht$height))
+			A4=cutree(ht, h=as.numeric(0.4)*max(ht$height))
+			A5=cutree(ht, h=as.numeric(0.5)*max(ht$height))
+
+			A0_unique=unique(A0)
+			A1_unique=unique(A1)
+			A2_unique=unique(A2)
+			A3_unique=unique(A3)
+			A4_unique=unique(A4)
+			A5_unique=unique(A5)
+			
+			namesA0=lapply(A0_unique, function (x) names(A0[which(A0==x)]))
+			namesA1=lapply(A1_unique, function (x) names(A1[which(A1==x)]))
+			namesA2=lapply(A2_unique, function (x) names(A2[which(A2==x)]))
+			namesA3=lapply(A3_unique, function (x) names(A3[which(A3==x)]))
+			namesA4=lapply(A4_unique, function (x) names(A4[which(A4==x)]))
+			namesA5=lapply(A5_unique, function (x) names(A5[which(A5==x)]))
+			rm(A0_unique,A1_unique,A2_unique,A3_unique,A4_unique,A5_unique)
+			rm(A0,A1,A2,A3,A4,A5)
+			tailles_namesA0=unlist(lapply(namesA0, function (x) length(unlist(x))))
+			tailles_namesA1=unlist(lapply(namesA1, function (x) length(unlist(x))))
+			tailles_namesA2=unlist(lapply(namesA2, function (x) length(unlist(x))))
+			tailles_namesA3=unlist(lapply(namesA3, function (x) length(unlist(x))))
+			tailles_namesA4=unlist(lapply(namesA4, function (x) length(unlist(x))))
+			tailles_namesA5=unlist(lapply(namesA5, function (x) length(unlist(x))))
+			singletonsA0=length(which(tailles_namesA0==1))
+			singletonsA1=length(which(tailles_namesA1==1))
+			singletonsA2=length(which(tailles_namesA2==1))
+			singletonsA3=length(which(tailles_namesA3==1))
+			singletonsA4=length(which(tailles_namesA4==1))
+			singletonsA5=length(which(tailles_namesA5==1))
+			print(k)
+			A0_serie=c(A0_serie, length(namesA0))
+			A1_serie=c(A1_serie, length(namesA1))
+			A2_serie=c(A2_serie, length(namesA2))
+			A3_serie=c(A3_serie, length(namesA3))
+			A4_serie=c(A4_serie, length(namesA4))
+						}
+			bilan[k,]=c(nb_genomes[k],paste(A0_serie, collapse=",") , paste(A1_serie, collapse=","), paste(A2_serie, collapse=","), paste(A3_serie, collapse=",") , paste(A4_serie, collapse=","), singletonsA0, singletonsA2, singletonsA4, length(mod2018_bis[,1]))
+
+			}
+			write.table(bilan, file="simulations_nbclusters_nbespeces_CE.csv", sep=";")
+			#bilan=data.frame(bilan, log_nb_total_0=log10(bilan$nb_total_0))
+			#bilan=data.frame(bilan, XX_nb_total_0=bilan$nb_total_0+bilan$log_nb_total_0)
+			bilan=read.table("simulations_nbclusters_nbespeces_CE_sshumangut.csv",header = TRUE, stringsAsFactors = FALSE, sep=";")
+			bilan2=bilan
+			for (t in 1:length(bilan[,1])){
+				for (y in 2:5){
+				bilan2[t,y]=median(as.numeric(unlist(strsplit(bilan2[t,y], ","))))
+				}
+			}
+			
+			fit  <- lm(as.numeric(bilan2$nb_total_0)~as.numeric(bilan2$nb_genomes))
+			#second degree
+			fit2 <- lm(as.numeric(bilan2$nb_total_0)~poly(as.numeric(bilan2$nb_genomes),2,raw=TRUE))
+			fit2_2 <- lm(as.numeric(bilan2$nb_total_2)~poly(as.numeric(bilan2$nb_genomes),2,raw=TRUE))
+			#third degree
+			fit3 <- lm(as.numeric(bilan2$nb_total_0)~poly(as.numeric(bilan2$nb_genomes),3,raw=TRUE))
+			#fourth degree
+			fit4 <- lm(as.numeric(bilan2$nb_total_0)~poly(as.numeric(bilan2$nb_genomes),4,raw=TRUE))
+			y<-function(x)
+			{
+			y<-fit2$coefficients[1]+fit2$coefficients[2] * x + fit2$coefficients[3] * x^2 
+			y
+			}
+			y_2<-function(x)
+			{
+			y_2<-fit2_2$coefficients[1]+fit2_2$coefficients[2] * x + fit2_2$coefficients[3] * x^2 
+			y_2
+			}
+			y3<-function(x)
+			{
+			y3<-fit3$coefficients[1]+fit3$coefficients[2] * x + fit3$coefficients[3] * x^2 + fit3$coefficients[4] * x^3 
+			y3
+			}
+			y4<-function(x)
+			{
+			y4<-fit4$coefficients[1]+fit4$coefficients[2] * x + fit4$coefficients[3] * x^2 + fit4$coefficients[4] * x^3 + fit4$coefficients[5] * x^4 
+			y4
+			}
+			postscript("simulations_nbclusters_nbespeces.eps", width=5, height=5)
+			plot(bilan2$nb_genomes, bilan2$nb_total_0, type="b", pch=20, col="red",  xlim=c(0,1200), ylim=c(0,3500), lwd=1)
+			lines(bilan2$nb_genomes, bilan2$nb_total_2, type="b", pch=20, col="blue")
+			xx=seq(from=50, to=2000, by=50)
+			lines(xx, y(xx), col="red")
+			lines(xx, y_2(xx), col="blue")
+			dev.off()
+
+
+			# Plot of confidence intervals
+			rm(list=ls())
+			#args <- commandArgs(trailingOnly=TRUE)
+			#print (args)
+			setwd("C:/Users/lapebie/Desktop/php_R_analyse_PUL")
+			bilan=read.table("simulations_nbclusters_nbespeces2.csv", header = TRUE, stringsAsFactors = FALSE, sep=";")
+			library.path <- .libPaths()
+			library(ggplot2, lib.loc = library.path)
+
+			int.ech = function(vector,conf.level=0.95,na.rm=T) { # VERSION 2016
+			if (length(vector)==0) { cat("Erreur ! Le vecteur ",substitute(vector),"est vide.\n")}
+			else { s = var(vector,na.rm=na.rm)
+			n = length(vector)-sum(is.na(vector))
+			ddl = n - 1 ; proba = (1-conf.level)*100 ; proba = (100-proba/2)/100
+			t_student = qt(proba, ddl) # quantile
+			intervalle = t_student * sqrt(s/n)
+			moyenne = mean(vector,na.rm=na.rm) ; return(intervalle) }} 
+			
+			bilan2=data.frame()
+			for (u in 1:nrow(bilan)){
+				 ghj=data.frame(nb_especes=bilan[u,1],nb_total_3=mean(as.numeric(unlist(strsplit(bilan$nb_total_3[u], ",")))), IC3=int.ech(as.numeric(unlist(strsplit(bilan$nb_total_3[u], ",")))),nb_total_1=mean(as.numeric(unlist(strsplit(bilan$nb_total_1[u], ",")))), IC1=int.ech(as.numeric(unlist(strsplit(bilan$nb_total_1[u], ",")))),nb_total_4=mean(as.numeric(unlist(strsplit(bilan$nb_total_4[u], ",")))), IC4=int.ech(as.numeric(unlist(strsplit(bilan$nb_total_4[u], ",")))),nb_total_0=mean(as.numeric(unlist(strsplit(bilan$nb_total_0[u], ",")))), IC0=int.ech(as.numeric(unlist(strsplit(bilan$nb_total_0[u], ",")))) ,nb_total_2=mean(as.numeric(unlist(strsplit(bilan$nb_total_2[u], ",")))), IC2=int.ech(as.numeric(unlist(strsplit(bilan$nb_total_2[u], ",")))))
+				bilan2=rbind(bilan2,ghj)
+			}
+			library(gplots)
+			setEPS()
+			postscript("nb_clusters_simulation2.eps", width=10, height=5)
+			plotCI(bilan2$nb_especes,bilan2$nb_total_2,pch=20,uiw=bilan2$IC2, col="grey",gap=0,type="o", ylim=c(0,3500), xlim=c(0,1000))
+			plotCI(bilan2$nb_especes,bilan2$nb_total_0,pch=8,uiw=bilan2$IC0, col="grey",gap=0,type="o", ylim=c(0,3500), xlim=c(0,1000), add=TRUE)
+			plotCI(bilan2$nb_especes,bilan2$nb_total_4,pch=17,uiw=bilan2$IC4, col="grey",gap=0,type="o", ylim=c(0,3500), xlim=c(0,1000), add=TRUE)
+			plotCI(bilan2$nb_especes,bilan2$nb_total_3,pch=17,uiw=bilan2$IC3, col="grey",gap=0,type="o", ylim=c(0,3500), xlim=c(0,1000), add=TRUE)
+			#plotCI(bilan2$nb_especes,bilan2$nb_total_1,pch=17,uiw=bilan2$IC1, col="grey",gap=0,type="o", ylim=c(0,3500), xlim=c(0,1000), add=TRUE)
+			dev.off()
+			
+			
+			
+			
+			# Values of the different simulations, confidence intervals, shapiro test
+			rm(list=ls())
+			setwd("C:/Users/lapebie/Desktop/php_R_analyse_PUL")
+			bilan=read.table("Supplementary information table 4 -simulation values.csv", header = TRUE, stringsAsFactors = FALSE, sep=";")
+			bilan=data.frame(bilan,shapiro0=rep(NA,length(bilan[,1])),shapiro1=rep(NA,length(bilan[,1])),shapiro2=rep(NA,length(bilan[,1])),shapiro4=rep(NA,length(bilan[,1])),shapiro5=rep(NA,length(bilan[,1])))
+			int.ech = function(vector,conf.level=0.95,na.rm=T) { # VERSION 2016
+			if (length(vector)==0) { cat("Erreur ! Le vecteur ",substitute(vector),"est vide.\n")}
+			else { s = var(vector,na.rm=na.rm)
+			n = length(vector)-sum(is.na(vector))
+			ddl = n - 1 ; proba = (1-conf.level)*100 ; proba = (100-proba/2)/100
+			t_student = qt(proba, ddl) # quantile
+			intervalle = t_student * sqrt(s/n)
+			moyenne = mean(vector,na.rm=na.rm) ; return(intervalle) }} 
+			for (j in seq_along(bilan[,1])){
+			bilan[j,4]=paste(mean(as.numeric(unlist(strsplit(bilan[j,3], ",")))),"+/-",round(int.ech(as.numeric(unlist(strsplit(bilan[j,3], ",")))), digit=1))
+			bilan[j,6]=paste(mean(as.numeric(unlist(strsplit(bilan[j,5], ",")))),"+/-",round(int.ech(as.numeric(unlist(strsplit(bilan[j,5], ",")))), digit=1))
+			bilan[j,8]=paste(mean(as.numeric(unlist(strsplit(bilan[j,7], ",")))),"+/-",round(int.ech(as.numeric(unlist(strsplit(bilan[j,7], ",")))), digit=1))
+			bilan[j,10]=paste(mean(as.numeric(unlist(strsplit(bilan[j,9], ",")))),"+/-",round(int.ech(as.numeric(unlist(strsplit(bilan[j,9], ",")))), digit=1))
+			bilan[j,12]=paste(mean(as.numeric(unlist(strsplit(bilan[j,11], ",")))),"+/-",round(int.ech(as.numeric(unlist(strsplit(bilan[j,11], ",")))), digit=1))
+			bilan$shapiro0[j]=round(as.numeric(unlist(shapiro.test(as.numeric(unlist(strsplit(bilan[j,3], ",")))))[2]),digit=2)
+			bilan$shapiro1[j]=round(as.numeric(unlist(shapiro.test(as.numeric(unlist(strsplit(bilan[j,5], ",")))))[2]),digit=2)
+			bilan$shapiro2[j]=round(as.numeric(unlist(shapiro.test(as.numeric(unlist(strsplit(bilan[j,7], ",")))))[2]),digit=2)
+			bilan$shapiro3[j]=round(as.numeric(unlist(shapiro.test(as.numeric(unlist(strsplit(bilan[j,9], ",")))))[2]),digit=2)
+			bilan$shapiro4[j]=round(as.numeric(unlist(shapiro.test(as.numeric(unlist(strsplit(bilan[j,11], ",")))))[2]),digit=2)
+			}
+			write.table(bilan, file="Supplementary information table 4 -simulation values2.csv", sep=";")
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
