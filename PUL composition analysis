@@ -1,0 +1,168 @@
+
+      
+      #The options for the PUL composition analysis are specified in a "variable" vector
+      # 1.   How to manage distant enzymes
+
+      #     "dist" option to include "dist" tagged enzymes(distant CAZyme example GH5_dist)
+      #     "exclude" option to exclude "dist" tagged enzymes
+      #     "incorporer" option is to merge "dist" tagged (distant CAZyme example GH5_dist) to its family (example GH5)
+			
+ 			variable="incorporer"
+			
+       #  2. Enzymes classes to search
+      famille=c("GH","PL","CE", "Sulf", "Pept")
+      
+			# 3. Families for which sub-families will be specified"GH5,GH30,GH13,GH43"
+      fam_ssfam=c("GH5","GH30","GH13","GH43")
+			
+			setwd("C:/Users/lapebie/Desktop/PUL_analysis") # directory path
+			K=read.table("les_bons.csv", header = TRUE, stringsAsFactors = FALSE, sep=";")### output file after SusC/D content analysis
+			K[,2]=gsub("GH10a","GH10", K[,2])
+			K[,2]=gsub("GH10b","GH10", K[,2])
+			K[,2]=gsub("_PL","_",K[,2])
+			K[,2]=gsub("_GT","_",K[,2])
+			K[,2]=gsub("_CE","_",K[,2])
+			K[,2]=gsub("_GH","_",K[,2])			
+			if (length(which(unlist(gregexpr("ssfamGH", variable))>0))>0){	
+				for (i in seq_along(K[,2])){
+				m <- gregexpr("GH[0-9]*_", K[i,2],perl=TRUE)
+				ancien=unlist(regmatches(K[i,2], m))
+				new=gsub("_","_+",unlist(regmatches(K[i,2], m)) )
+				for (y in seq_along(ancien)){
+				K[i,2]=gsub(ancien[y],new[y],K[i,2])
+				}}}
+			
+			if (length(which(unlist(gregexpr("ssfamPL", variable))>0))>0){	
+				for (i in seq_along(K[,2])){
+				m <- gregexpr("PL[0-9]*_", K[i,2],perl=TRUE)
+				ancien=unlist(regmatches(K[i,2], m))
+				new=gsub("_","_+",unlist(regmatches(K[i,2], m)) )
+				for (y in seq_along(ancien)){
+				K[i,2]=gsub(ancien[y],new[y],K[i,2])
+				}}}
+				
+			if (length(which(unlist(gregexpr("ssfamGT", variable))>0))>0){	
+				for (i in seq_along(K[,2])){
+				m <- gregexpr("GT[0-9]*_", K[i,2],perl=TRUE)
+				ancien=unlist(regmatches(K[i,2], m))
+				new=gsub("_","_+",unlist(regmatches(K[i,2], m)) )
+				for (y in seq_along(ancien)){
+				K[i,2]=gsub(ancien[y],new[y],K[i,2])
+				}}}
+				
+			for (t in seq_along(fam_ssfam)){
+				linb=paste(fam_ssfam[t], "_", sep="")
+				srgv=paste(fam_ssfam[t], "_+", sep="")
+				K[,2]=gsub(linb,srgv, K[,2])
+			}
+
+			K[,2]=gsub("etoile_","etoile_+", K[,2])
+			if (max(unlist(gregexpr("incorporer", variable)))<0){			
+			K[,2]=gsub("_dist","_+dist",K[,2])
+			}
+			K[,2]=gsub("_[^+][^ ]* "," ",K[,2])
+			K[,2]=gsub("_[^+][^ ]*$","",K[,2])
+			K[,2]=gsub("[+]","",K[,2])
+
+			K=K[,1:10]
+			N=vector()
+			for (i in 1:length(K[,1])){
+				H=unlist(strsplit(K[i,2]," "))
+				N=c(N,length(H))
+			}
+			K=cbind(K,N)
+			K[2,]
+        
+
+			Q=K[,1:11]
+			recherche=vector()
+			if (length(which(unlist(gregexpr("GT", famille))>0))>0){
+			recherche=c(recherche,"GT")
+			}
+			if (length(which(unlist(gregexpr("GH", famille))>0))>0){
+			recherche=c(recherche,"GH")
+			}
+			if (length(which(unlist(gregexpr("PL", famille))>0))>0){
+			recherche=c(recherche,"PL")
+			}
+			if (length(which(unlist(gregexpr("Sulf", famille))>0))>0){
+			recherche=c(recherche,"Sulf")
+			}
+			if (length(which(unlist(gregexpr("Pept", famille))>0))>0){
+			recherche=c(recherche,"Pept")
+			}
+			if (length(which(unlist(gregexpr("CE", famille))>0))>0){
+			recherche=c(recherche,"CE")
+			}
+			if (length(which(unlist(gregexpr("EPI", famille))>0))>0){
+			recherche=c(recherche,"EPI")
+			}
+			
+			recherche
+			modules_associes=vector()
+				for(w in 1:length(recherche)){
+			for (i in 1:length(Q[,1])){
+				H=unlist(strsplit(Q[i,2]," "))
+						index=vector()
+						
+			
+				for (t in 1:length(H)){
+					## 
+					if (unlist(gregexpr(recherche[w], H[t]))>0){
+					index=c(index,t)
+					}
+				}
+				modules_associes=c(modules_associes,H[index])
+				modules_associes=unique(modules_associes)
+				modules_associes=sort(modules_associes)
+			}
+			print(paste("OK recherche de ",recherche[w], sep=" "))
+			}
+			
+			for (u in 1:length(modules_associes)){
+				Q=cbind(Q,rep(0,length(Q[,1])))
+				colnames(Q)[length(Q[1,])]=modules_associes[u]
+			}
+			
+			for (i in 1:length(Q[,1])){
+					H=unlist(strsplit(Q[i,2]," "))
+				for (t in 12:length(Q)){
+					Q[i,t]=length(which(H==colnames(Q)[t]))
+				}
+			}
+			etoile_mil=unique(c(which( unlist(gregexpr("etoile", colnames(Q))>0)), which(as.numeric(gsub("GH","",colnames(Q)))>999), which(as.numeric(gsub("PL","",colnames(Q)))>999), which(as.numeric(gsub("CE","",colnames(Q)))>999)))
+			
+			if (max(unlist(gregexpr("etoile", variable)))<0){
+			Q=Q[,-etoile_mil]
+           
+			}
+			dist=unique(which(unlist(gregexpr("dist", colnames(Q))>0))) 
+			if (max(unlist(gregexpr("dist", variable)))<0 && length(dist)>1){
+			Q=Q[,-dist]	
+           
+			}
+        
+			colnames(Q)
+          dist
+			p=vector()
+			for (i in 1:length(Q[,1])){
+				U=sum(Q[i,12:length(Q[1,])])
+				if (U==0){
+				p=c(p,i)
+				}
+			}
+
+			
+			D=Q
+			for (i in 1:length(D[,1])){
+				for (m in 12:length(D[1,])){
+				if(D[i,m]>0){
+				D[i,m]=1
+				print(i)
+				}
+				}
+			}
+			
+			write.table(D, "modularity_ss_Sum.csv", sep=";")#remplacer les * par des $ dans le fichier csv
+			D=read.table("modularity_ss_Sum.csv", header = TRUE, stringsAsFactors = FALSE, sep=";")
+      
