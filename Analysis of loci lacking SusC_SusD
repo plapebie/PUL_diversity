@@ -1,0 +1,40 @@
+rm(list=ls())
+setwd("C:/Users/lapebie/Desktop/php_R_analyse_PUL") # directory path
+mlkj=read.table("Synthese clusters.csv", header = TRUE, stringsAsFactors = FALSE, sep=";")# output file from "PUL clustering" script
+mlkj$Modules_coeur=gsub("GT[0-9][0-9]*","",mlkj$Modules_coeur)
+mlkj$Modules_coeur=gsub("[.]","",mlkj$Modules_coeur)
+mlkj$Modules_coeur=gsub("[0-9][0-9]*%","",mlkj$Modules_coeur)
+mlkj$Modules_coeur=gsub("[(][)]","",mlkj$Modules_coeur)
+mlkj$Modules_coeur=gsub("  ","",mlkj$Modules_coeur)
+mlkj$Modules_coeur=gsub(" $","",mlkj$Modules_coeur)
+
+
+mlkj$Genre=gsub("[.]","",mlkj$Genre)
+mlkj$Genre=gsub("[0-9][0-9]*","",mlkj$Genre)
+mlkj$Genre=gsub("[(][)]"," ",mlkj$Genre)
+mlkj$Genre=gsub("  ","",mlkj$Genre)
+
+
+unique_cazyme_cluster=mlkj[which(mlkj$Percent.CAZYme.clusters==1),]
+autres=mlkj[which(mlkj$Percent.CAZYme.clusters<1),]
+inclus_index=vector()
+pas_inclus_index=vector()
+for (s in seq_along(unique_cazyme_cluster[,1])){
+	cazyme_clusters_modules=unlist(strsplit(unique_cazyme_cluster$Modules_coeur[s], " "))
+	for (y in seq_along(autres$Modules_coeur)){
+	PUL_clusters_modules=unlist(strsplit(autres$Modules_coeur[y], " "))
+	if (length(intersect(cazyme_clusters_modules,PUL_clusters_modules))==length(cazyme_clusters_modules)){
+	inclus_index=c(inclus_index,s)
+	}
+	}
+	print(s)
+}
+unique_inclus_index=unique(inclus_index)
+pas_inclus_index=setdiff(seq_along(unique_cazyme_cluster[,1]),unique_inclus_index)
+pas_inclus=data.frame(gfdt=rep("pas inclus",length(unique_cazyme_cluster[pas_inclus_index,1])),unique_cazyme_cluster[pas_inclus_index,])
+inclus=data.frame(gfdt=rep("inclus",length(unique_cazyme_cluster[unique_inclus_index,1])),unique_cazyme_cluster[unique_inclus_index,])
+dans_PUL=data.frame(gfdt=rep("dans_PUL",length(mlkj[which(mlkj$Percent.CAZYme.clusters<1 &mlkj$Percent.CAZYme.clusters>0),1])),mlkj[which(mlkj$Percent.CAZYme.clusters<1 &mlkj$Percent.CAZYme.clusters>0),])
+PUL_without_cazyme_clusters=data.frame(gfdt=rep("no SusC/D less loci",length(mlkj[which(mlkj$Percent.CAZYme.clusters==0),1])), mlkj[which(mlkj$Percent.CAZYme.clusters==0),])
+
+poiuy=rbind(pas_inclus,inclus,dans_PUL,PUL_without_cazyme_clusters)
+write.table(poiuy, file="Cazyme_clusters_included_versus_included_in_PULs.csv", sep=";")
