@@ -1,0 +1,10 @@
+setwd("C:/Users/lapebie/Desktop/php_R_analyse_PUL")
+in_out=read.table("In_out_fam_without_ssfam_2018-12-14.csv", header = TRUE, stringsAsFactors = FALSE, sep=";")
+rownames(in_out)=in_out[,1]
+chi=chisq.test(as.matrix(in_out[,2:3]))
+bzeb=chi$stdres[order(-chi$stdres[,1]),]
+expected=round(chi$expected,2)
+write.table(bzeb,"chi2residuals_families_subfamilies.csv" , sep=";")
+write.table(expected,"chi2expected_families_subfamilies.csv" , sep=";")
+write.table(in_out,"chi2observed_families_subfamilies.csv" , sep=";")
+write.table(round(bzeb,digits=2), file="chi2residuals_cazyme_PUL_pasPUL.csv", sep=";")
