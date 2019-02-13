@@ -1,0 +1,309 @@
+			rm(list=ls())
+			args=0 # proportion of CAZyme mismatches allowed (between 0 and 1)
+			setwd("C:/Users/lapebie/Desktop/php_R_analyse_PUL")
+			mod=read.table("modularity_ss_Sum.csv", header = TRUE, stringsAsFactors = FALSE, sep=";")
+      
+
+
+			literature=mod[which(mod$V6=="Literature-derived PUL"),]
+			CAZyme_cluster=mod[which(mod$V6=="CAZyme cluster"),]
+      #to exclude loci lacking SusC/D
+			if (length(which(mod$V6=="CAZyme cluster"))>0){
+			mod=mod[-which(mod$V6=="CAZyme cluster"),]
+			}
+			
+			taxo=read.table("Taxonomie_3_niveaux.csv", header = TRUE, stringsAsFactors = FALSE, sep=";")
+			ecol=read.table("samplingEcosystem.csv", header = FALSE, stringsAsFactors = FALSE, sep=";")
+			ecol2=read.table("Donnees_environnement_genome_bacteroidetes.csv", header = FALSE, stringsAsFactors = FALSE, sep=";")
+			PMID=read.table("literature_PMID_substrate.csv", header = FALSE, stringsAsFactors = FALSE, sep=";")
+			tr=read.table("tandem_repeat.csv", header = TRUE, stringsAsFactors = FALSE, sep=";")
+			##ici print le pourcentage où il n'y a rien dans ecol
+			library.path <- .libPaths()
+			library("vegan", lib.loc = library.path)
+			library("easyGgplot2", lib.loc = library.path)
+			library("stringdist", lib.loc = library.path)
+			library("JLutils", lib.loc = library.path)
+
+			rownames(mod)=mod[,1]
+			T=mod[,12:length(colnames(mod))]
+			cazy=unique(c(which(unlist(gregexpr("GH", colnames(T)))>0), which(unlist(gregexpr("PL", colnames(T)))>0)))
+			CE=unique(which(unlist(gregexpr("CE", colnames(T)))>0))
+			GT=unique(which(unlist(gregexpr("GT", colnames(T)))>0))
+			Sulf=unique(which(unlist(gregexpr("Sulf", colnames(T)))>0))
+			Pept=unique(which(unlist(gregexpr("Pept", colnames(T)))>0))
+			Sum_GH_PL=rowSums(T[,cazy])
+			Sum_CE=rowSums(T[,CE])
+			Sum_GT=rowSums(T[,GT])
+			Sum_Pept=T[,Pept]
+			Sum_Sulf=T[,Sulf]			
+			print("ca marche 1")
+
+			T=T[-which(Sum_GH_PL==0),]
+			T=T[,-GT]
+			dist_PUL=vegdist(T, method="jaccard")## là on regarde les PUL
+			#pdf("distribution_des_distances_de_Jaccard.pdf")
+			#ggplot2.violinplot(data=as.vector(dist_PUL))
+			#dev.off()
+			print("ca marche bis")
+			#seuil=quantile(as.vector(dist_PUL),probs=c(args,1-args))[1]
+			
+			ht <- hclust(dist_PUL, method="average")
+			#plot(ht, cex=0.25, lwd=0.5)
+			ht$height <- round(ht$height, 6)
+			A=cutree(ht, h=as.numeric(args)*max(ht$height))
+			A_unique=unique(A)
+			nb_clusters=vector()
+			nb_de_PULs_agreges=vector()
+			nb_de_PULs_faux_positifs=vector()
+
+			#best=best.cutree(ht, min=10, max=4000)
+			
+			#A=cutree(ht, h=args)
+			#A_unique=unique(A)
+			blabla_singleton=data.frame()
+			
+			#write.table(A, file="Clusters_Modules_Composition_seuil0_25_Jaccard_dix.csv", sep=";")
+			
+      cluster_synthese=matrix(ncol=32, nrow=length(A_unique))
+			#cluster_espece=matrix(ncol=length(unique(mod$V5)), nrow=length(A_unique))
+			#colnames(cluster_espece)=unique(mod$V5)
+			#rownames(cluster_espece)=paste("Cluster", seq_along(A_unique), sep="_")
+			nombre_PUL=vector()
+			recodage=c(letters,LETTERS)
+			for (i in seq_along(A_unique)){
+				blabla=data.frame()
+				genre=vector()
+				family=vector()
+				class=vector()
+				count_tr=0
+				for (t in seq_along(A[which(A==A_unique[i])])){
+					blabla=rbind(blabla, mod[which(mod[,1]==names(A[which(A==A_unique[i])])[t]),])
+					if(is.element(names(A[which(A==A_unique[i])])[t], tr[,1])){
+					count_tr=count_tr+1
+					}
+					}
+					genre=na.omit(unlist(lapply(names(A[which(A==A_unique[i])]), function(x) taxo[which(taxo[,1]==mod[which(mod[,1]==x),5]),2])))
+					family=na.omit(unlist(lapply(names(A[which(A==A_unique[i])]), function(x) taxo[which(taxo[,1]==mod[which(mod[,1]==x),5]),3])))
+					class=na.omit(unlist(lapply(names(A[which(A==A_unique[i])]), function(x) taxo[which(taxo[,1]==mod[which(mod[,1]==x),5]),4])))
+					ecosystem_categ=na.omit(unlist(lapply(names(A[which(A==A_unique[i])]), function(x) ecol$V7[which(ecol[,2]==mod[which(mod[,1]==x),3])])))
+					ecosystem_type=na.omit(unlist(lapply(names(A[which(A==A_unique[i])]), function(x) ecol$V9[which(ecol[,2]==mod[which(mod[,1]==x),3])])))
+					ecosystem_categ=ecosystem_categ[-which(ecosystem_categ=="")]
+					ecosystem_type=ecosystem_type[-which(ecosystem_type=="")]
+					ecosystem_type2=na.omit(unlist(lapply(names(A[which(A==A_unique[i])]), function(x) ecol2$V17[which(ecol2$V4==mod[which(mod[,1]==x),3])])))
+					ecosystem_type2=ecosystem_type2[-which(ecosystem_type2=="")]
+					
+					#Predicted_validated=unique(unlist(lapply(unlist(A[i]), function(x) mod[which(mod[,1]==x),5])))
+					#CAZyme_clust_Number=length(blabla[which(blabla$V6=="CAZyme cluster"),1])
+					especes_unique=unique(na.omit(blabla$V5))
+					
+					genre_unique=unique(genre)
+					family_unique=unique(family)
+					class_unique=unique(class)
+					ecosystem_categ_unique=unique(ecosystem_categ)
+					ecosystem_type_unique=unique(ecosystem_type)
+					ecosystem_type2_unique=unique(ecosystem_type2)
+				
+				occ_genre=vector()
+				for (u in 1:length(genre_unique)){
+					occ_genre=c(occ_genre, length(which(genre==genre_unique[u]))/length(genre))
+				}
+				occ_family=vector()
+				for (u in 1:length(family_unique)){
+					occ_family=c(occ_family, length(which(family==family_unique[u]))/length(family))
+				}
+				occ_class=vector()
+				for (u in 1:length(class_unique)){
+					occ_class=c(occ_class, length(which(class==class_unique[u]))/length(class))
+				}
+				occ_categ=vector()
+				for (u in 1:length(ecosystem_categ_unique)){
+					occ_categ=c(occ_categ, length(which(ecosystem_categ==ecosystem_categ_unique[u]))/length(ecosystem_categ))
+				}
+				occ_type=vector()
+				for (u in 1:length(ecosystem_type_unique)){
+					occ_type=c(occ_type, length(which(ecosystem_type==ecosystem_type_unique[u]))/length(ecosystem_type))
+				}
+				occ_type2=vector()
+				for (u in 1:length(ecosystem_type2_unique)){
+					occ_type2=c(occ_type2, length(which(ecosystem_type2==ecosystem_type2_unique[u]))/length(ecosystem_type2))
+				}
+				
+				
+				
+				
+				presence_relative_col=rep(NA,length(blabla[1,]))
+				for (y in 12:(length(blabla[1,])-length(which(unlist(gregexpr("Sum", colnames(blabla)))>0)))){
+					presence_relative_col[y]=sum(blabla[,y])/length(blabla[,1])
+				}
+
+				index_modules_coeur=which(presence_relative_col > 0.1)
+				modules_coeur=colnames(blabla)[index_modules_coeur]
+				proportion_relative_coeur=paste(round(presence_relative_col[index_modules_coeur]*100,digit=1),"%", sep="")
+				nombre_PUL=length(blabla[,1])
+				
+				cluster_synthese[i,1]=paste("Cluster", i, sep="_", collapse="  ")
+			
+				cluster_synthese[i,2]=paste(paste(modules_coeur,paste("(",proportion_relative_coeur,")",sep="")), sep=" ", collapse=" ") 
+				cluster_synthese[i,3]=paste(proportion_relative_coeur, sep=" ", collapse=" ")
+				cluster_synthese[i,4]=paste(paste(genre_unique,paste("(",occ_genre,")",sep="")), sep=" ", collapse=" ")
+				cluster_synthese[i,5]=nombre_PUL
+				cluster_synthese[i,7]=length(especes_unique)
+				Sum=colSums(blabla[,12:length(blabla[1,])])
+				blabla=blabla[,-(which(Sum==0)+11)]
+
+				
+				
+	
+				
+
+				dist_matrix_sim=matrix(NA, nrow=length(blabla[,1]), ncol=length(blabla[,1]))
+				cluster_synthese[i,21]=median(as.numeric(blabla$N))
+				#cluster_synthese[i,22]=median(as.numeric(blabla$Nb_unk))
+				cluster_synthese[i,23]=length(modules_coeur)
+									cluster_synthese[i,24]=count_tr
+					cluster_synthese[i,25]=length(intersect(blabla$V1,CAZyme_cluster$V1))
+					if(cluster_synthese[i,25]>0){
+					cluster_synthese[i,26]=paste(intersect(blabla$V1,CAZyme_cluster$V1), collapse=",")
+					}
+					cluster_synthese[i,27]=length(intersect(blabla$V1,literature$V1))
+					if(cluster_synthese[i,27]>0){
+					cluster_synthese[i,28]=paste(intersect(blabla$V1,literature$V1), collapse=",")
+					}
+					if(length(intersect(blabla$V1,PMID$V1))>0){
+					iuo=intersect(blabla$V1,PMID$V1)
+					cluster_synthese[i,32]=paste(unlist(lapply(iuo, function(x) PMID[which(PMID$V1==x),2])),collapse=",")
+					}
+						dist_matrix_sim=matrix(NA, nrow=length(blabla[,1]), ncol=length(blabla[,1]))
+						for (b in 1:length(blabla[,1])){
+						PUL=unlist(strsplit(blabla[b,2]," "))
+						if (length(which(PUL=="unk"))>0){
+						PUL=PUL[-which(PUL=="unk")]
+						}
+						PUL_rev=rev(PUL)
+						for (t in 1:length(blabla[,1])){
+							PUL_adverse=unlist(strsplit(blabla[t,2]," "))
+							if (length(which(PUL_adverse=="unk"))>0){
+							PUL_adverse=PUL_adverse[-which(PUL_adverse=="unk")]
+							}
+							modules_associes=vector()
+							PUL_recode=vector()
+							PUL_rev_recode=vector()
+							PUL_adverse_recode=vector()
+							modules_associes=c(modules_associes, PUL, PUL_adverse)
+							modules_associes=unique(modules_associes)
+							modules_associes=sort(modules_associes)
+							if (length(modules_associes)>46){
+							print(paste("plus de quarante six modules pour", blabla[i,1], blabla[t,1]))
+							}
+							matrix_recodage=rbind(modules_associes, recodage[1:length(modules_associes)])
+							for (k in 1:length(PUL)){
+							PUL_recode=paste(PUL_recode, matrix_recodage[2,which(matrix_recodage[1,]==PUL[k])], sep="")			
+							}
+							for (k in 1:length(PUL_rev)){
+							PUL_rev_recode=paste(PUL_rev_recode, matrix_recodage[2,which(matrix_recodage[1,]==PUL_rev[k])], sep="")			
+							}
+							for (l in 1:length(PUL_adverse)){		
+							PUL_adverse_recode=paste(PUL_adverse_recode, matrix_recodage[2,which(matrix_recodage[1,]==PUL_adverse[l])], sep="")	
+							}
+						kp=c(PUL_recode,PUL_adverse_recode)
+						kp2=c(PUL_rev_recode,PUL_adverse_recode)
+						dist_matrix_sim[b,t]=max(stringsim(PUL_rev_recode,PUL_adverse_recode,method='osa'), stringsim(PUL_recode,PUL_adverse_recode,method='osa' ))
+						if(dist_matrix_sim[b,t]==stringsim(PUL_rev_recode,PUL_adverse_recode,method='osa')){
+							blabla[t,2]=paste(rev(unlist(strsplit(blabla[t,2]," "))),collapse=" ")
+						}
+						}
+					}
+					f=summary(as.vector(dist_matrix_sim))
+					#cluster_synthese[i,6]=paste(f, sep=" ", collapse=" ")
+					cluster_synthese[i,8]=round(median(as.vector(dist_matrix_sim)), digit=2)
+					cluster_synthese[i,30]=round(mean(as.vector(dist_matrix_sim)), digit=2)
+					
+				dist_matrix_sim=matrix(NA, nrow=length(blabla[,1]), ncol=length(blabla[,1]))
+				cluster_synthese[i,21]=median(as.numeric(blabla$N))
+				#cluster_synthese[i,22]=median(as.numeric(blabla$Nb_unk))
+				cluster_synthese[i,23]=length(modules_coeur)
+									cluster_synthese[i,24]=count_tr
+					cluster_synthese[i,25]=length(intersect(blabla$V1,CAZyme_cluster$V1))
+					if(cluster_synthese[i,25]>0){
+					cluster_synthese[i,26]=paste(intersect(blabla$V1,CAZyme_cluster$V1), collapse=",")
+					}
+					cluster_synthese[i,27]=length(intersect(blabla$V1,literature$V1))
+					if(cluster_synthese[i,27]>0){
+					cluster_synthese[i,28]=paste(intersect(blabla$V1,literature$V1), collapse=",")
+					}
+				if(length(blabla[,1])>1){
+						dist_matrix_sim=matrix(NA, nrow=length(blabla[,1]), ncol=length(blabla[,1]))
+						for (b in 1:length(blabla[,1])){
+						PUL=unlist(strsplit(blabla[b,2]," "))
+						if (length(which(PUL=="unk"))>0){
+						PUL=PUL[-which(PUL=="unk")]
+						}
+						PUL_rev=rev(PUL)
+						for (t in 1:length(blabla[,1])){
+							PUL_adverse=unlist(strsplit(blabla[t,2]," "))
+							if (length(which(PUL_adverse=="unk"))>0){
+							PUL_adverse=PUL_adverse[-which(PUL_adverse=="unk")]
+							}
+							modules_associes=vector()
+							PUL_recode=vector()
+							PUL_rev_recode=vector()
+							PUL_adverse_recode=vector()
+							modules_associes=c(modules_associes, PUL, PUL_adverse)
+							modules_associes=unique(modules_associes)
+							modules_associes=sort(modules_associes)
+							if (length(modules_associes)>46){
+							print(paste("plus de quarante six modules pour", blabla[i,1], blabla[t,1]))
+							}
+							matrix_recodage=rbind(modules_associes, recodage[1:length(modules_associes)])
+							for (k in 1:length(PUL)){
+							PUL_recode=paste(PUL_recode, matrix_recodage[2,which(matrix_recodage[1,]==PUL[k])], sep="")			
+							}
+							for (k in 1:length(PUL_rev)){
+							PUL_rev_recode=paste(PUL_rev_recode, matrix_recodage[2,which(matrix_recodage[1,]==PUL_rev[k])], sep="")			
+							}
+							for (l in 1:length(PUL_adverse)){		
+							PUL_adverse_recode=paste(PUL_adverse_recode, matrix_recodage[2,which(matrix_recodage[1,]==PUL_adverse[l])], sep="")	
+							}
+						kp=c(PUL_recode,PUL_adverse_recode)
+						kp2=c(PUL_rev_recode,PUL_adverse_recode)
+						dist_matrix_sim[b,t]=max(stringsim(PUL_rev_recode,PUL_adverse_recode,method='lcs'), stringsim(PUL_recode,PUL_adverse_recode,method='lcs' ))
+						if(dist_matrix_sim[b,t]==stringsim(PUL_rev_recode,PUL_adverse_recode,method='lcs' )){
+							blabla[t,2]=paste(rev(unlist(strsplit(blabla[t,2]," "))),collapse=" ")
+						}
+						}
+					}
+					
+					#cluster_synthese[i,6]=paste(f, sep=" ", collapse=" ")
+					cluster_synthese[i,29]=round(median(as.vector(dist_matrix_sim)), digit=2)
+					cluster_synthese[i,31]=round(mean(as.vector(dist_matrix_sim)), digit=2)
+					cluster_synthese[i,9]=length(genre_unique)
+					cluster_synthese[i,10]=length(family_unique)
+					cluster_synthese[i,11]=length(class_unique)
+					cluster_synthese[i,12]=paste(paste(class_unique,paste("(",round(occ_class*100,digit=1),"%)",sep="")), sep=" ", collapse=" ")
+					cluster_synthese[i,13]=paste(paste(ecosystem_categ_unique,paste("(",round(occ_categ*100, digit=1),"%)",sep="")), sep=" ", collapse=" ")
+					cluster_synthese[i,14]=paste(paste(ecosystem_type_unique,paste("(",round(occ_type*100, digit=1),"%)",sep="")), sep=" ", collapse=" ")
+					cluster_synthese[i,17]=paste(paste(family_unique,paste("(",round(occ_family*100, digit=1),"%)",sep="")), sep=" ", collapse=" ")
+					cluster_synthese[i,18]=paste(paste(genre_unique,paste("(",round(occ_genre*100, digit=1),"%)",sep="")), sep=" ", collapse=" ")					
+					cluster_synthese[i,19]=paste(paste(ecosystem_type2_unique,paste("(",round(occ_type2*100, digit=1),"%)",sep="")), sep=" ", collapse=" ")
+					cluster_synthese[i,20]=paste(blabla$V1, collapse=",")
+
+					
+					
+					#cluster_synthese[i,15]=paste(Predicted_validated, sep=" ", collapse=" ")
+					#cluster_synthese[i,16]=CAZyme_clust_Number
+					}else{
+					blabla_singleton=rbind(blabla_singleton, mod[which(mod[,1]==names(A[which(A==A_unique[i])])[t]),])
+					}
+				#cluster_espece[i,]=table(factor(blabla$V5, levels = unique(mod$V5)))
+				print(i)
+				if (length(blabla[,1])>1){
+				
+				write.table(blabla ,file=paste("cluster",i, "average_0_3.csv", sep="_"),sep=";")
+				}
+				}
+				colnames(cluster_synthese)=c("Cluster","Modules_coeur","Proportion_modules_coeur","Genre","Nombre de PUL","Summary Similarite sequences modules", "Nombre especes", "Mediane_stringsim_osa", "nombre_genre", "nombre_family", "nombre_class", "differentes class","ecosystem_category","ecosystem_type","Predicted_validated", "Number_of_CAZYME_cluster", "Differentes familles", "Differentes genres", "ecosystem_type2","PUL_IDs","Nb_ORF_median","Nb_unk","length_core","Nombre_tandem_repeat","Nombre_CAZyme_clusters","Cazyme_cluster_IDs","Nombre_literature_derived","Literature_derived_IDs","Mediane_stringsim_lcs","Mean_stringsim_osa", "Mean_stringsim_lcs", "PMID")
+				cluster_synthese=cluster_synthese[order(-as.numeric(cluster_synthese[,5])),]
+				
+				
+						write.table(cluster_synthese, file=paste("Synthese_PUL_Clusters_average_avec_CE_literature_PMID_without GT",args,".csv", collapse="_"), sep=";")
+			#write.table(cluster_espece, file="Presence_PUL_Clusters_par_espece_average03.csv", sep=";")
