@@ -1,0 +1,185 @@
+	   rm(list=ls())
+		setwd("C:/Users/lapebie/Desktop/PUL_analysis")
+		library.path <- .libPaths()
+		library("seqinr", lib.loc = library.path)
+		library("factoextra", lib.loc = library.path)
+		library("FactoMineR", lib.loc = library.path)
+	
+
+		genom=read.table("Donnees_genomiques_2018-03-28.csv", header = TRUE, stringsAsFactors = FALSE, sep=";")
+		canoniques=read.table("SusCSusDcontigus_meme_sens_1seulSusD.csv", header = TRUE, stringsAsFactors = FALSE, sep=";")
+		Au_moins_1SusCSusDSusCSusD_continu_meme_sens_2SusD=read.table("tandem_repeat.csv", header = TRUE, stringsAsFactors = FALSE, sep=";")
+		Sulf=read.table("sansCazymes_pasPeptmaisSulf.csv", header = TRUE, stringsAsFactors = FALSE, sep=";")
+		Ni_ni_ni=read.table("Ni_ni_ni.csv", header = TRUE, stringsAsFactors = FALSE, sep=";")
+		Pept=read.table("sansCazymes_pasSulfmaisPept.csv", header = TRUE, stringsAsFactors = FALSE, sep=";")
+		CAZyme=read.table("CAZyme_niPept_niSulf.csv", header = TRUE, stringsAsFactors = FALSE, sep=";")
+		Sulf_Cazymes=read.table("Sulf_Cazymes_niPept.csv", header = TRUE, stringsAsFactors = FALSE, sep=";")
+		Pept_Cazymes=read.table("Cazymes_pasSulfmaisPept.csv", header = TRUE, stringsAsFactors = FALSE, sep=";")
+		mod=read.table("modularity_ss_Sum.csv", header = TRUE, stringsAsFactors = FALSE, sep=";")
+		sansSusCD=read.table("CAZyme_clusters.csv", header = TRUE, stringsAsFactors = FALSE, sep=";")
+	
+		canoniques$V5=gsub("_"," ", canoniques$V5)
+		Au_moins_1SusCSusDSusCSusD_continu_meme_sens_2SusD$V5=gsub("_"," ", Au_moins_1SusCSusDSusCSusD_continu_meme_sens_2SusD$V5)
+		sansSusCD$V5=gsub("_"," ", sansSusCD$V5)
+		Sulf$V5=gsub("_"," ", Sulf$V5)
+		Ni_ni_ni$V5=gsub("_"," ", Ni_ni_ni$V5)
+		Pept$V5=gsub("_"," ", Pept$V5)
+		CAZyme$V5=gsub("_"," ", CAZyme$V5)
+		Sulf_Cazymes$V5=gsub("_"," ", Sulf_Cazymes$V5)
+		Pept_Cazymes$V5=gsub("_"," ", Pept_Cazymes$V5)
+		mod$V5=gsub("_"," ", mod$V5)
+		
+		
+		
+		X=rbind(canoniques,Au_moins_1SusCSusDSusCSusD_continu_meme_sens_2SusD)
+		X[,2]=gsub("diese","",X[,2])
+		X[,2]=gsub("[*]", "etoile",X[,2])
+	
+		taxo=read.table("Taxonomie_3_niveaux.csv", header = TRUE, stringsAsFactors = FALSE, sep=";")
+		taxo[,1]=gsub("_"," ", taxo[,1])
+		genom$Organism=gsub("_"," ", genom$Organism)
+		
+		
+		# ## if the analysis is restricted to a given class (example Bacteroidia)
+		#	class="Bacteroidia"
+		#	especes=taxo[which(taxo$class==class),1]
+		#	index=unlist(lapply(especes, function (x) which(X$V5==x)))
+		#	index2=unlist(lapply(especes, function (x) which(genom$Organism==x)))
+		#	X=X[index,]
+		#	genom=genom[index2,]
+
+		N=vector()
+		for (i in 1:length(X[,1])){
+			H=unlist(strsplit(X[i,2]," "))
+			N=c(N,length(H))
+		}
+		X=cbind(X,N)
+	
+		recherche=c("unk")
+		modules_associes=vector()
+			for(w in 1:length(recherche)){
+		for (i in 1:length(X[,1])){
+			H=unlist(strsplit(X[i,2]," "))
+					index=vector()
+					
+		
+			for (t in 1:length(H)){
+				## fais cette boucle for car GH*_GH pose probleme car deux fois le motif GH
+				if (unlist(gregexpr(recherche[w], H[t]))>0){
+				index=c(index,t)
+				}
+			}
+			modules_associes=c(modules_associes,H[index])
+			modules_associes=unique(modules_associes)
+			modules_associes=sort(modules_associes)
+		}
+		print(paste("OK recherche de ",recherche[w], sep=" "))
+		}
+		
+		for (u in 1:length(modules_associes)){
+			X=cbind(X,rep(0,length(X[,1])))
+			colnames(X)[length(X[1,])]=modules_associes[u]
+		}
+		
+		for (i in 1:length(X[,1])){
+				H=unlist(strsplit(X[i,2]," "))
+			for (t in 23:length(X)){
+				X[i,t]=length(which(H==colnames(X)[t]))
+			}
+		}
+		
+	
+	
+		ubc=cbind(genom, family=rep(NA,length(genom[,1])), class=rep(NA,length(genom[,1])), genus=rep(NA,length(genom[,1])), Dist_intergenic_in_median=rep(NA,length(genom[,1])), Dist_intergenic_in_sd=rep(NA,length(genom[,1])), Dist_intergenic_out_median=rep(NA,length(genom[,1])), Dist_intergenic_out_sd=rep(NA,length(genom[,1])), sd_length_PULs=rep(NA,length(genom[,1])))
+		#ubc[,2]=gsub("_", " ", ubc[,2])
+			for (u in seq_along(ubc$Organism)){
+			tryCatch({
+			ubc$Dist_intergenic_in_median[u]=median(as.numeric(unlist(strsplit(genom$intergenic_distances_in_PUL[which(genom$Organism==ubc$Organism[u])],","))))
+			ubc$Dist_intergenic_in_sd[u]=sd(as.numeric(unlist(strsplit(genom$intergenic_distances_in_PUL[which(genom$Organism==ubc$Organism[u])],","))))
+			ubc$Dist_intergenic_out_median[u]=median(as.numeric(unlist(strsplit(genom$intergenic_distances_tout_genome[which(genom$Organism==ubc$Organism[u])],","))))
+			ubc$Dist_intergenic_out_sd[u]=sd(as.numeric(unlist(strsplit(genom$intergenic_distances_tout_genome[which(genom$Organism==ubc$Organism[u])],","))))
+			ubc$median_length_PULs[u]=median(as.numeric(X$N[which(X$V5==ubc$Organism[u])]))
+
+			ubc$sd_length_PULs[u]=sd(as.numeric(X$N[which(X$V5==ubc$Organism[u])]))
+			ubc$family[u]=X$family[which(X$V5==ubc$Organism[u])]			
+			ubc$genus[u]=X$genus[which(X$V5==ubc$Organism[u])]	
+			ubc$class[u]=X$class[which(X$V5==ubc$Organism[u])]				
+			#jhvs=mod[which(mod$V5==ubc$Organism[u]),]
+			#Sum=colSums(jhvs[,12:length(jhvs[1,])])
+			#jhvs=jhvs[,-(which(Sum==0)+11)]
+			#ubc$Nb_famillesCazymesdansPULs[u]=(ncol(jhvs)-11)/nrow(jhvs)
+			}, error=function(e){})
+		
+		}
+	
+		longueurs=lapply(ubc$Organism, function (x) X$N[which(X$V5==x)])##ici à revoir
+		Numbers_PULs=unlist(lapply(ubc$Organism, function (x) length(X$N[which(X$V5==x)])))#supprimer
+		Numbers_sansSusCD=unlist(lapply(ubc$Organism, function (x) length(sansSusCD[which(sansSusCD$V5==x),1])))#supprimer
+		Numbers_ilots=unlist(lapply(ubc$Organism, function (x) length(Au_moins_1SusCSusDSusCSusD_continu_meme_sens_2SusD[which(Au_moins_1SusCSusDSusCSusD_continu_meme_sens_2SusD$V5==x),1])))
+		Numbers_Sulf=unlist(lapply(ubc$Organism, function (x) length(Sulf[which(Sulf$V5==x),1])))
+		Numbers_Ni_ni_ni=unlist(lapply(ubc$Organism, function (x) length(Ni_ni_ni[which(Ni_ni_ni$V5==x),1])))
+		Numbers_Pept=unlist(lapply(ubc$Organism, function (x) length(Pept[which(Pept$V5==x),1])))
+		Numbers_CAZyme=unlist(lapply(ubc$Organism, function (x) length(CAZyme[which(CAZyme$V5==x),1])))
+		Numbers_Sulf_Cazymes=unlist(lapply(ubc$Organism, function (x) length(Sulf_Cazymes[which(Sulf_Cazymes$V5==x),1])))
+		Numbers_Pept_Cazymes=unlist(lapply(ubc$Organism, function (x) length(Pept_Cazymes[which(Pept_Cazymes$V5==x),1])))
+		
+		Nb_PUL_CAzymes=Numbers_CAZyme+Numbers_Sulf_Cazymes+Numbers_Pept_Cazymes
+		
+		ilots_relatifs=Numbers_ilots/(Nb_PUL_CAzymes+1)
+		sans_SusCD_relatifs=Numbers_sansSusCD/Numbers_PULs
+		Sulf_relatifs=Numbers_Sulf/Numbers_PULs
+		Ni_ni_ni_relatifs=Numbers_Ni_ni_ni/Numbers_PULs
+		Pept_relatifs=Numbers_Pept/Numbers_PULs
+		CAZyme_relatifs=Numbers_CAZyme/Numbers_PULs
+		Sulf_Cazymes_relatifs=Numbers_Sulf_Cazymes/Numbers_PULs
+		Pept_Cazymes_relatifs=Numbers_Pept_Cazymes/Numbers_PULs
+		rownames(mod)=mod[,1]
+		T=mod[,12:length(colnames(mod))]
+		cazy=unique(c(which(unlist(gregexpr("GH", colnames(T)))>0), which(unlist(gregexpr("CE", colnames(T)))>0), which(unlist(gregexpr("PL", colnames(T)))>0)))
+		Sum=rowSums(T[,cazy])
+		mod2=mod[-which(Sum==0),]
+		index=unlist(lapply(intersect(Au_moins_1SusCSusDSusCSusD_continu_meme_sens_2SusD[,1],mod2[,1]), function(x) which(Au_moins_1SusCSusDSusCSusD_continu_meme_sens_2SusD[,1]==x)))
+		tr_cazyme=Au_moins_1SusCSusDSusCSusD_continu_meme_sens_2SusD[index,]
+		Numbers_tr_cazyme=unlist(lapply(ubc$Organism, function (x) length(tr_cazyme[which(tr_cazyme$V5==x),1])))
+	
+		ougb=cbind(ubc,Numbers_tr_cazyme,Numbers_sansSusCD, Numbers_ilots, Nb_PUL_CAzymes, Numbers_Pept , Numbers_Sulf, Numbers_Ni_ni_ni, Ratio_GHPLin_vs_out=ubc$GH_PL_in/(ubc$GH_PL_in+ubc$GH_PL_out), richesseGHPLin=ubc$GH_PL_in/ubc$Nombre_ORF_in, richesseGHPLout=ubc$GH_PL_out/ubc$Nombre_ORF_out,    stringsAsFactors = FALSE)
+		ougb=ougb[-which(ougb$Organism=="Imtechella halotolerans K1" | ougb$Organism=="Sediminibacterium salmoneum NBRC 103935"),]
+
+		colnames(ougb)
+		fzf3=ougb[,!(colnames(ougb)=="Numbers_tr_cazyme"| colnames(ougb)=="Numbers_sansSusCD" | colnames(ougb)=="Numbers_ilots"| colnames(ougb)=="Ratio_GHPLin_vs_out"| colnames(ougb)=="sd_length_PULs" | colnames(ougb)=="Dist_intergenic_out_sd" |colnames(ougb)=="Dist_intergenic_in_sd" | colnames(ougb)=="Nombre_de_PULs" | colnames(ougb)=="Organism" | colnames(ougb)=="Genome_id" | colnames(ougb)=="intergenic_distances_in_PUL" | colnames(ougb)=="intergenic_distances_tout_genome" | colnames(ougb)=="family"| colnames(ougb)=="genus"| colnames(ougb)=="Nombre_ORF_in"| colnames(ougb)=="GH_PL_in"| colnames(ougb)=="GH_PL_out"| colnames(ougb)=="Nombre_ORF_out")]
+		
+		##au niveau de la classe
+		
+		fzf3=fzf3[-which(fzf3$class=="Balneolia" | fzf3$class=="Ignavibacteria" | fzf3$class=="Gemmatimonadetes"),]
+		lkj=na.omit(fzf3)
+		lkj_2=lkj[,!(colnames(lkj)=="class")]
+
+		library.path <- .libPaths()
+		library("factoextra", lib.loc = library.path)
+		library("FactoMineR", lib.loc = library.path)	
+		library("ade4", lib.loc = library.path)
+		res.pca <- dudi.pca(lkj_2,
+							scannf = FALSE,   # Hide scree plot
+							nf = 5            # Number of components kept in the results
+							)
+		setEPS()
+		postscript("contributions_axes_variables.eps")
+		fviz_eig(res.pca)
+		dev.off()
+		postscript("correlations_axes_variables.eps")
+		fviz_pca_var(res.pca,
+					col.var = "contrib", # Color by contributions to the PC
+					gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+					repel = TRUE     # Avoid text overlapping
+					)
+		dev.off()
+		
+					
+		postscript("PCA_class.eps")
+		gtyh=PCA(lkj_2, graph=FALSE)			 
+		fviz_pca_biplot(gtyh, 
+							col.ind = lkj$class, palette = "jco", 
+							addEllipses = TRUE, label = "var",
+							col.var = "black", repel = TRUE,
+							legend.title = "class")
+		dev.off()
