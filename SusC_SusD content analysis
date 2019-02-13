@@ -1,0 +1,272 @@
+			rm(list=ls())
+      #options for the SusC/D content analysis are specified in the vector named "args"
+      #"Reprendre" file specifies the raw data file to analyse
+      # "literature_derived","predicted","canonique","tandem", "Cazyme_clusters" specifies the categories of PULs to select for further analysis
+			args=c("Reprendre_2.csv","literature_derived","predicted","canonique","tandem")  
+			
+			setwd("C:/Users/lapebie/Desktop/PUL_analysis") # 
+			library.path <- .libPaths()
+			library("seqinr", lib.loc = library.path)
+
+			### mettre les modules recherchés
+			fichier=args[which(unlist(gregexpr("Reprendre", args))>0)]
+			K=read.table(fichier, header = FALSE, stringsAsFactors = FALSE, sep=";")
+			K[1,]
+
+			
+
+			if (length(args[which(args=="literature_derived")])<1 && length(args[which(args=="predicted")])>0){	
+			X=K[which(K$V6=="Predicted PUL"),]
+			}
+			if (length(args[which(args=="literature_derived")])>0 && length(args[which(args=="predicted")])<1){	
+			X=K[which(K$V6=="Literature-derived PUL"),]
+			}
+			if (length(args[which(args=="literature_derived")])>0 && length(args[which(args=="predicted")])>0){	
+			X=K[which(K$V6=="Predicted PUL" | K$V6=="Literature-derived PUL"),]
+			}
+			if (length(args[which(args=="Cazyme_clusters")])>0){
+			X=rbind(X,K[which(K$V6=="CAZyme cluster"),])
+			}
+			X[1,]
+           
+			rgh=read.table("Taxonomie.csv", header = FALSE, stringsAsFactors = FALSE, sep=";") # Taxonomy file
+			ihf=data.frame(rgh[,1], genus=rep(NA,length(rgh[,1])), family=rep(NA,length(rgh[,1])), class=rep(NA,length(rgh[,1])))
+			for (y in seq_along(ihf[,1])){
+				U=unlist(strsplit(rgh[which(rgh[,1]==ihf[y,1]),3],";"))
+				if (length(which(U=="genus"))>0){
+				ihf[y,2]=U[which(U=="genus")[1]+1]
+			}else{
+			print(paste("pb Taxonomie","genus",ihf[y,1], sep=" "))
+			}
+				if (length(which(U=="family"))>0){
+				ihf[y,3]=U[which(U=="family")[1]+1]
+			}else{
+			print(paste("pb Taxonomie","family",ihf[y,1], sep=" "))
+			}
+				if (length(which(U=="class"))>0){
+				ihf[y,4]=U[which(U=="class")[1]+1]
+						}else{
+			print(paste("pb Taxonomie","class",ihf[y,1], sep=" "))
+			}
+			}
+			colnames(ihf)[1]="Nom_espece"
+			write.table(ihf, "Taxonomie_3_niveaux.csv", sep=";", row.names=FALSE)
+			
+			#poj=read.table("Taxonomie_huit_3_niveaux.csv", header = TRUE, stringsAsFactors = FALSE, sep=";")
+			X=cbind(X, genus=rep(NA,length(X[,1])), family=rep(NA,length(X[,1])), class=rep(NA,length(X[,1])), stringsAsFactors = FALSE) 
+			for (t in seq_along(X[,3])){
+			 if(length(which(ihf[,1]==X[t,5]))>0){
+			X[t,8:10]=ihf[which(ihf[,1]==X[t,5]),2:4]
+			}}
+			
+
+			F=X[,1:10]
+			
+
+			recherche2=c("dieseSusC","dieseSusD","SusCdiese","SusDdiese") 
+			
+			### mettre les modules recherchés
+			modules_associes=vector()
+			
+			for(k in 1:length(recherche2)){
+					F=cbind(F,rep(NA,length(F[,1])))
+					colnames(F)[length(F[1,])]=paste("index_",recherche2[k], sep="")
+				for (i in 1:length(F[,1])){
+					H=unlist(strsplit(F[i,2]," "))
+							index=vector()
+					for (t in 1:length(H)){
+						if (unlist(gregexpr(recherche2[k], H[t]))>0){
+						index=c(index,t)
+						}
+					}
+					F[i,length(F[1,])]=paste(which(H==recherche2[k]), collapse=",")
+					
+					
+				}
+			
+			}
+
+			
+			F=cbind(F,"Au_moins_1SusCSusD_continu_meme_sens"=rep(0,length(F[,1])),"Nombre_SusD"=rep(0,length(F[,1])),"Au_moins_1SusCSusDSusCSusD_continu_meme_sens"=rep(NA,length(F[,1])), "SusCSusCSusDSusD_continu_meme_sens"=rep(NA,length(F[,1])),"X289_X290_aumilieu_ilot_meme_sens"=rep(NA,length(F[,1])), "Triplet_SusCSusD_continu_meme_sens"=rep(NA,length(F[,1])), "Nombre_SusC"=rep(NA,length(F[,1])))
+				r=vector()
+				for (i in 1:length(F[,1])){
+					if((length(as.numeric(unlist(strsplit(F[i,11],","))))>0) & (length(as.numeric(unlist(strsplit(F[i,12],","))))>0)){
+					for(t in 1:length(as.numeric(unlist(strsplit(F[i,12],","))))){
+						p=as.numeric(unlist(strsplit(F[i,12],",")))[t]-as.numeric(unlist(strsplit(F[i,11],",")))
+						if (sum(p==1 | p==-1 )>0){
+						F$Au_moins_1SusCSusD_continu_meme_sens[i]="Oui"
+						}
+						}
+						}
+					if((length(as.numeric(unlist(strsplit(F[i,13],","))))>0) & (length(as.numeric(unlist(strsplit(F[i,14],","))))>0)){
+					for(t in 1:length(as.numeric(unlist(strsplit(F[i,14],","))))){
+						q=as.numeric(unlist(strsplit(F[i,14],",")))[t]-as.numeric(unlist(strsplit(F[i,13],",")))
+						if (sum(q==1 | q==-1)>0){
+						F$Au_moins_1SusCSusD_continu_meme_sens[i]="Oui"
+						
+						}
+						}
+						}
+						
+						
+						if (length(which(unlist(gregexpr("dieseSusC dieseSusD dieseSusC dieseSusD", F[i,2]))>0))>0 | length(which(unlist(gregexpr("dieseSusD dieseSusC dieseSusD dieseSusC", F[i,2]))>0))>0  | length(which(unlist(gregexpr("SusCdiese SusDdiese SusCdiese SusDdiese", F[i,2]))>0))>0 | length(which(unlist(gregexpr("SusDdiese SusCdiese SusDdiese SusCdiese", F[i,2]))>0))>0   | length(which(unlist(gregexpr("dieseSusD dieseSusC dieseSusC dieseSusD", F[i,2]))>0))>0 |  length(which(unlist(gregexpr("dieseSusC dieseSusD dieseSusD dieseSusC", F[i,2]))>0))>0 | length(which(unlist(gregexpr("SusDdiese SusCdiese SusCdiese SusDdiese", F[i,2]))>0))>0 | length(which(unlist(gregexpr("SusCdiese SusDdiese SusDdiese SusCdiese", F[i,2]))>0))>0){
+						F$Au_moins_1SusCSusDSusCSusD_continu_meme_sens[i]="Oui"
+			
+						}
+						
+						if (length(which(unlist(gregexpr("dieseSusD dieseSusD dieseSusC dieseSusC", F[i,2]))>0))>0 |length(which(unlist(gregexpr("dieseSusC dieseSusC dieseSusD dieseSusD", F[i,2]))>0))>0  | length(which(unlist(gregexpr("SusDdiese SusDdiese SusCdiese SusCdiese", F[i,2]))>0))>0 | length(which(unlist(gregexpr("SusCdiese SusCdiese SusDdiese SusDdiese", F[i,2]))>0))>0){
+						F$SusCSusCSusDSusD_continu_meme_sens[i]="Oui"
+			
+						}
+						#if (length(which(unlist(gregexpr("dieseSusC dieseSusD dieseSusC dieseSusD dieseSusC dieseSusD", F[i,2]))>0))>0 | length(which(unlist(gregexpr("SusCdiese SusDdiese SusCdiese SusDdiese SusCdiese SusDdiese", F[i,2]))>0))>0 | length(which(unlist(gregexpr("SusDdiese SusCdiese SusDdiese SusCdiese SusDdiese SusCdiese", F[i,2]))>0))>0 | length(which(unlist(gregexpr("dieseSusD dieseSusC dieseSusD dieseSusC dieseSusD dieseSusC", F[i,2]))>0))>0 ){
+						#F$Triplet_SusCSusD_continu_meme_sens[i]="Oui"
+			            #
+						#}
+            
+						#if (length(which(unlist(gregexpr("X290diese SusCdiese", F[i,2]))>0))>0 | length(which(unlist(gregexpr("dieseX290 dieseSusC", F[i,2]))>0))>0 | length(which(unlist(gregexpr("dieseSusC dieseX290", F[i,2]))>0))>0 | length(which(unlist(gregexpr("SusCdiese X290diese", F[i,2]))>0))>0){
+						#F$X289_X290_aumilieu_ilot_meme_sens[i]="Oui"
+			            #
+						#}
+						r=unlist(strsplit(paste(F[i,12],F[i,14], sep=","),","))
+						r=r[r != ""] 
+						F$Nombre_SusD[i]=length(r)
+						
+						s=unlist(strsplit(paste(F[i,11],F[i,13], sep=","),","))
+						s=s[s != ""] 
+						F$Nombre_SusC[i]=length(s)
+						}
+						
+			SusCSusDcontigus_meme_sens_1seulSusD=F[which(F$Au_moins_1SusCSusD_continu_meme_sens=="Oui" & F$Nombre_SusD==1),]
+			Au_moins_1SusCSusDSusCSusD_continu_meme_sens_2SusD=F[which(F$Au_moins_1SusCSusDSusCSusD_continu_meme_sens=="Oui" & F$Nombre_SusD==2),]
+			Au_moins_1SusCSusDSusCSusD_continu_meme_sens_2SusD_2SusC=F[which(F$Au_moins_1SusCSusDSusCSusD_continu_meme_sens=="Oui" & F$Nombre_SusD==2 & F$Nombre_SusC==2),]
+			SusCSusCSusDSusD_continu_meme_sens_2SusD_2SusC=F[which(F$SusCSusCSusDSusD_continu_meme_sens=="Oui" & F$Nombre_SusD==2 & F$Nombre_SusC==2),]
+			Au_moins_1SusCSusDSusCSusD_continu_meme_sens=F[which(F$Au_moins_1SusCSusDSusCSusD_continu_meme_sens=="Oui"),]
+			Triplet_quadruplet_contigu_meme_sens=F[which(F$Triplet_SusCSusD_continu_meme_sens=="Oui" & (F$Nombre_SusD==3 | F$Nombre_SusD==4)),]
+			X289_X290_aumilieu_ilot_meme_sens=F[which(F$X289_X290_aumilieu_ilot_meme_sens=="Oui"),]
+			les_bons_compo_SusCSusD=rbind(Au_moins_1SusCSusDSusCSusD_continu_meme_sens_2SusD, SusCSusDcontigus_meme_sens_1seulSusD)
+			U=setdiff(X[,1],les_bons_compo_SusCSusD[,1])
+			U=setdiff(U,Triplet_quadruplet_contigu_meme_sens[,1])
+			O=lapply(U, function(x) which(F[,1]==x))
+			les_autres=F[unlist(O),]
+			
+            
+			
+
+			write.table(SusCSusDcontigus_meme_sens_1seulSusD, file="SusCSusDcontigus_meme_sens_1seulSusD.csv", sep=";")
+      write.table(Au_moins_1SusCSusDSusCSusD_continu_meme_sens_2SusD_2SusC, file="tandem_repeat.csv", sep=";")
+
+			sansSusCD=les_autres[which(les_autres[,14]=="" & les_autres[,11]=="" & les_autres[,12]==""& les_autres[,13]==""),]
+			write.table(sansSusCD, file="CAZyme_clusters.csv", sep=";")
+			J=setdiff(les_autres[,1], sansSusCD[,1])
+			O=lapply(J, function(x) which(les_autres[,1]==x))
+			les_autres_SusCD=les_autres[unlist(O),]
+			A=les_autres_SusCD[which(les_autres_SusCD[,12]=="" & les_autres_SusCD[,11]==""),]
+			A2=A[which(A[,13]=="" | A[,12]==""),]
+			J2=setdiff(A[,1], A2[,1])
+			O2=lapply(J2, function(x) which(A[,1]==x))
+			A=A[unlist(O2),]
+			B=les_autres_SusCD[which(les_autres_SusCD[,13]=="" & les_autres_SusCD[,14]==""),]	
+			B2=B[which(B[,11]=="" | B[,12]==""),]
+			J3=setdiff(B[,1], B2[,1])
+			O3=lapply(J3, function(x) which(B[,1]==x))
+			B=B[unlist(O3),]
+			manqueSusC_ouSusD=rbind(A2,B2)
+			C=rbind(A,B, A2,B2)
+			
+			queSusC=F[which(F[,12]=="" & F[,14]=="" & (F[,11]!="" | F[,13]!="")),]
+			queSusD=F[which(F[,11]=="" & F[,13]=="" & (F[,12]!="" | F[,14]!="")),]
+			soitSusC_soitSusD=rbind(queSusC, queSusD)
+			
+			
+			
+			P=setdiff(les_autres_SusCD[,1], C[,1])
+			W=lapply(P, function(x) which(les_autres_SusCD[,1]==x))
+			les_autres_sens_opposes=les_autres_SusCD[unlist(W),]
+			A=cbind(A, index_couplesSusCSusD=rep(NA, length(A[,1])))
+			for(i in seq_along (A[,1])){
+				SusC=as.numeric(unlist(strsplit(A[i,14],",")))
+				SusD=as.numeric(unlist(strsplit(A[i,13],",")))
+				couple_SusCD=vector()
+					repeat{
+						
+						if (length(SusC)==0 | length(SusD)==0){
+						A$index_couplesSusCSusD[i]=paste(couple_SusCD, collapse=",")
+						break
+						}else{
+							if(length(which(SusC[1]-SusD==1 | SusC[1]-SusD==-1))>0){
+							partenaire_SusD=SusD[which(SusC[1]-SusD==1 | SusC[1]-SusD==-1)]
+							couple_SusCD=c(couple_SusCD, min (SusC[1], partenaire_SusD))
+							SusD=SusD[-which(SusC[1]-SusD==1 | SusC[1]-SusD==-1)]
+							}
+	        
+							SusC=SusC[-1]
+	        
+						}
+					}
+			}
+			B=cbind(B, index_couplesSusCSusD=rep(NA, length(B[,1])))
+			for(i in seq_along (B[,1])){
+			SusC=as.numeric(unlist(strsplit(B[i,12],",")))
+			SusD=as.numeric(unlist(strsplit(B[i,11],",")))
+			couple_SusCD=vector()
+				repeat{
+					
+					if (length(SusC)==0 | length(SusD)==0){
+					B$index_couplesSusCSusD[i]=paste(couple_SusCD, collapse=",")
+					break
+					}else{
+						if(length(which(SusC[1]-SusD==1 | SusC[1]-SusD==-1))>0){
+						partenaire_SusD=SusD[which(SusC[1]-SusD==1 | SusC[1]-SusD==-1)]
+						couple_SusCD=c(couple_SusCD, min (SusC[1], partenaire_SusD))
+						SusD=SusD[-which(SusC[1]-SusD==1 | SusC[1]-SusD==-1)]
+						}
+            
+						SusC=SusC[-1]
+            
+					}
+				}
+			}
+			D=rbind(A,B)
+			D=cbind(D, espace_entre_SusCSusD=rep(NA,length(D[,1])), espace_entre_les_SusCD_divise_par_longueur=rep(NA,length(D[,1])))
+			espace_entre_les_SusCD=vector()
+			espace_entre_les_SusCD_divise_par_longueur=vector()
+			for (i in seq_along(D[,1])){
+				if (length(unlist(strsplit(D$index_couplesSusCSusD[i],",")))>1){
+				h=as.numeric(unlist(strsplit(D$index_couplesSusCSusD[i],",")))
+				V=vector()
+				V2=vector()
+				for ( u in 2:length(h)){
+				V=c(V,h[u]-h[u-1]-2)
+				V2=c(V2,(h[u]-h[u-1]-2)/D$N[i])
+				espace_entre_les_SusCD=c(espace_entre_les_SusCD, (h[u]-h[u-1]-2))
+				espace_entre_les_SusCD_divise_par_longueur=c(espace_entre_les_SusCD_divise_par_longueur, (h[u]-h[u-1]-2)/D$N[i])
+            
+				}
+				D$espace_entre_SusCSusD[i]=paste(V, collapse=",")
+				D$espace_entre_SusCSusD_par_longueur[i]=paste(V2/D$N[i], collapse=",")
+				
+				
+				}
+			}
+
+			un=D[which(D$espace_entre_SusCSusD==1),]
+			deux=D[which(D$espace_entre_SusCSusD==2),]
+			les_bons=data.frame()
+			if (length(args[which(args=="canonique")])>0){
+			les_bons=rbind(les_bons,SusCSusDcontigus_meme_sens_1seulSusD )
+			}
+			if (length(args[which(args=="tandem")])>0){
+			les_bons=rbind(les_bons, Au_moins_1SusCSusDSusCSusD_continu_meme_sens_2SusD_2SusC)
+			}
+			
+			if (length(args[which(args=="Cazyme_clusters")])>0){	
+			les_bons=rbind(les_bons, sansSusCD)
+			}
+			print("longueur les_bons")
+			length(les_bons[1,])
+			les_bons[,2]=gsub("diese","",les_bons[,2])
+			les_bons[,2]=gsub("[*]", "etoile",les_bons[,2])
+			print("longueur les_bons")
+			length(les_bons[1,])
+	
+			write.table(les_bons, file="les_bons.csv", sep=";" )
