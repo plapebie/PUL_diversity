@@ -164,5 +164,51 @@
 			}
 			
 			write.table(D, "modularity_ss_Sum.csv", sep=";")#remplacer les * par des $ dans le fichier csv
-			D=read.table("modularity_ss_Sum.csv", header = TRUE, stringsAsFactors = FALSE, sep=";")
+
+
+			cazy_moins_etoile=unique(c(which(unlist(gregexpr("GH", colnames(D)))>0), which(unlist(gregexpr("CE", colnames(D)))>0), which(unlist(gregexpr("PL", colnames(D)))>0)))
+			
+			pept=unique(which(unlist(gregexpr("Pept", colnames(D))>0)))
+			Sulf=unique(which(unlist(gregexpr("Sulf", colnames(D)))>0))
+			EPI=unique(which(unlist(gregexpr("EPI", colnames(D)))>0))
+        
+			D=cbind(D,Sum_cazy_moins_etoile=rep(0,length(D[,1])), Sum_Pept=rep(0,length(D[,1])), Sum_Sulf=rep(0,length(D[,1])))
+			
+			D$Sum_cazy_moins_etoile=rowSums(D[,cazy_moins_etoile])
+			if (length(pept)>1){
+			D$Sum_Pept=rowSums(D[,pept])			
+			}else{
+			D$Sum_Pept=D[,pept]
+			}
+			if (length(Sulf)>1){
+			D$Sum_Sulf=rowSums(D[,Sulf])			
+			}else{
+			D$Sum_Sulf=D[,Sulf]
+			}
+        
+			D$Sum_Epi=D[,EPI]
+           
+			Sulf_Cazymes_niPept=D[which(D$Sum_Sulf>0 & D$Sum_cazy_moins_etoile>0 & D$Sum_Pept==0),]#1
+			CAZyme_niPept_niSulf=D[which(D$Sum_cazy_moins_etoile>0 &  D$Sum_Sulf==0 & D$Sum_Pept==0),]#2
+			Cazymes_pasSulfmaisPept=D[which(D$Sum_Sulf==0 & D$Sum_cazy_moins_etoile>0 & D$Sum_Pept>0),]#3
+			sansCazymes_pasSulfmaisPept=D[which(D$Sum_Sulf==0 & D$Sum_cazy_moins_etoile==0 & D$Sum_Pept>0),]#4
+			Ni_ni_ni=D[which(D$Sum_Sulf==0 & D$Sum_cazy_moins_etoile==0 & D$Sum_Pept==0),]#5
+			sansCazymes_pasPeptmaisSulf=D[which(D$Sum_Sulf>0 & D$Sum_cazy_moins_etoile==0 & D$Sum_Pept==0),]#6
+			write.table(Sulf_Cazymes_niPept, "Sulf_Cazymes_niPept.csv", sep=";")
+			write.table(CAZyme_niPept_niSulf, "CAZyme_niPept_niSulf.csv", sep=";")
+			write.table(Cazymes_pasSulfmaisPept, "Cazymes_pasSulfmaisPept.csv", sep=";")
+			write.table(sansCazymes_pasSulfmaisPept, "sansCazymes_pasSulfmaisPept.csv", sep=";")
+			write.table(Ni_ni_ni, "Ni_ni_ni.csv", sep=";")
+			write.table(sansCazymes_pasPeptmaisSulf, "sansCazymes_pasPeptmaisSulf.csv", sep=";")
+			
+			Nombre=c(nrow(Sulf_Cazymes_niPept),nrow(CAZyme_niPept_niSulf), nrow(Cazymes_pasSulfmaisPept), nrow(sansCazymes_pasSulfmaisPept), nrow(Ni_ni_ni), nrow(sansCazymes_pasPeptmaisSulf))
+			pie(Nombre,  labels=c("1", "2", "3","4","5","6"), col=c("#e5f5f9","#99d8c9","#2ca25f", "#efedf5","#bcbddc","#756bb1"), cex=1.5)
+			zef=D[which(D$Sum_Sulf>0 & D$Sum_cazy_moins_etoile>0 & D$Sum_Pept>0),]# y a un overlap des trois catégories _ 181 PUL
+			
+			Nombre=c(nrow(Sulf_Cazymes_niPept),nrow(CAZyme_niPept_niSulf), nrow(Cazymes_pasSulfmaisPept), nrow(sansCazymes_pasSulfmaisPept), nrow(Ni_ni_ni), nrow(sansCazymes_pasPeptmaisSulf))
+			setEPS()
+			postscript("camembert.eps")
+			pie(Nombre,  labels=c("Sulf_Cazymes_niPept", "CAZyme_niPept_niSulf", "Cazymes_pasSulfmaisPept","sansCazymes_pasSulfmaisPept","Ni_ni_ni","sansCazymes_pasPeptmaisSulf"), col=c("#e5f5f9","#99d8c9","#2ca25f", "#efedf5","#bcbddc","#756bb1"), cex=1.5)
+		   dev.off()
+		   print("fini")
       
