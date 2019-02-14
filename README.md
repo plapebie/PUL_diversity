@@ -1,16 +1,20 @@
 # PUL_diversity
 R scripts
 
-Ces scripts codés en R permettent de réaliser les analyses statistiques des Polysaccharidees Utilization Loci (PUL) publiées dans Lapébie et al, 2019.
+These scripts coded in R have been used in Lapébie et al, 2019 (Nature Communications, in revision) for the statistical analyzes of the Polysaccharidees Utilization Loci (PUL).
 
-Les trois premiers scripts numérotés de 1 à 3, permettent successivement :
-1. l'analyse et le tri des loci en fonction de leur composition en SusC/SusD. Le fichier d'entrée est le fichier "Reprendre" de données brutes extraites de PULdb
-    Les fichiers de sortie sont des tableaux contenant les différentes catégories de loci. Le fichier "les_bons" est le fichier contenant les PULs retenus pour les analyses ultérieures.
+The first three scripts numbered from 1 to 3, successively allow:
+1. Analysis and sorting of loci according to their SusC / SusD composition. The input file is the "Reprendre" file of raw data extracted from PULdb
+    The output files are tables containing the different categories of loci. The file "les_bons" is the file containing the PULs selected for the subsequent analyzes.
     
-2. L'analyse des contenus en CAZyme des différents PULs (et de manière optionnelle les CAZyme clusters). Le fichier d'entrée est les fichier "les_bons.csv" (voir script 1). Les catégories d'enzymes (GH, PL ..) , les familles  (GH2, PL12...), les sous-familles (GH5_2, GH30_4) sont à choisir. Différents modes de traitement des enzymes distamment relatés aux restes de la famille est aussi possible.
-Deux fichiers de sortie sont générés: (i) "modularity_ss_sum.csv" qui donne les présences/absences de (sous-)familles dans chaque PUL (ii) "Number_of_gene_copies.csv" gives the number of gene copies for each PUL.
+2. The analysis of the CAZyme contents of the different PULs (and optionally the CAZyme clusters). The input file is the "les_bons.csv" file (see script 1). The categories of enzymes (GH, PL ..), the families (GH2, PL12 ...), the sub-families (GH5_2, GH30_4) can be chosen. Different modes of treatment of enzymes distant from the other members of the family is also possible.
+Two output files are generated: (i) "modularity_ss_sum.csv" which gives the presence / absence of (sub) families in each PUL (ii) "Number_of_gene_copies.csv" gives the number of gene copies for each PUL.
 
-3. Le clustering des PULs basé sur la présence/absence des familles d'enzymes utilise le fichier "modularity_ss_sum.csv". Le pourcentage de mismatch est paramétrable par l'utilisateur ("args").
+3. Clustering of PULs based on the presence / absence of enzyme families uses the file "modularity_ss_sum.csv". The percentage of mismatch can be set by the user ("args").
+
+
+
+
 
 
 
