@@ -13,7 +13,7 @@ Two output files are generated: (i) "modularity_ss_sum.csv" which gives the pres
 3. Clustering of PULs based on the presence / absence of enzyme families uses the file "modularity_ss_sum.csv". The percentage of mismatch can be set by the user ("args").
 
 
-
+Four other scripts are provided for analysis that can be done after the 1-2-3 scripts and that are explained in the publication. Intput files used in PCA can be provided upon request. 
 
 
 
